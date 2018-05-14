@@ -11,9 +11,9 @@ A tool for labeling bounding boxes of training images. It is based on BBox-Label
 
 # Usage
 ## for basic bbox-label-tool:
-- Put image in the folder which is under "Images"
-- Start label-tool with "python3 main.py"
-- Input "Image Dir" which is the name of your folder under "Images"
+- Add paths to images (imgDir) and labels (outDir) in "label_boxes.py"
+- Modify how many times smaller the images will be scaled (rescaleFactor) "label_boxes.py" if necessary.
+- Start label-tool with "python label_boxes.py"
 - click "load" and you can label images now!
 - To create a new bounding box, left-click to select the first vertex. Moving the mouse to draw a rectangle, and left-click again to select the second vertex.
 - To cancel the bounding box while drawing, just press "&lt;ESC&gt;"
@@ -21,6 +21,7 @@ A tool for labeling bounding boxes of training images. It is based on BBox-Label
 - To delete all existing bounding boxes in the image, simply click 'ClearAll'.
 - After finishing one image, click 'Next' to advance. Likewise, click 'Prev' to reverse. You can press "&lt;Left&gt;" and "&lt;Right&gt;" Or input the index and click 'Go' to navigate to an arbitrary image instead. ***The labeling result will be saved if and only if the 'Next' button is clicked.***
 - label files are stored in "Labels" folder
+- When reloading the images, the previous labels won't display correctly. The label are still good, though.
 
 ## for multi-class labeling:
 - Write down your classes in "class.txt"

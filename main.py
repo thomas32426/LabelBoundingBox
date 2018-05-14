@@ -35,6 +35,7 @@ class LabelTool:
         self.currentLabelClass = ''
         self.cla_can_temp = []
         self.classCandidateFileName = 'class.txt'
+        self.rescaleFactor = 1
 
         # initialize mouse state
         self.STATE = dict()
@@ -125,7 +126,8 @@ class LabelTool:
             s = r'D:\workspace\python\labelGUI'
 
         # get image list
-        self.imageDir = os.path.join(r'./Images', '%s' %self.category)
+        
+        self.imageDir = os.path.join(self.imageDir, '%s' %self.category)
         self.imageList = glob.glob(os.path.join(self.imageDir, '*.JPG'))
         if len(self.imageList) == 0:
             print('No .JPG images found in the specified dir!')
@@ -136,7 +138,7 @@ class LabelTool:
         self.total = len(self.imageList)
 
          # set up output dir
-        self.outDir = os.path.join(r'./Labels', '%s' %self.category)
+        self.outDir = os.path.join(self.outDir, '%s' %self.category)
         if not os.path.exists(self.outDir):
             os.mkdir(self.outDir)
 
@@ -147,6 +149,10 @@ class LabelTool:
         # load image
         imagePath = self.imageList[self.cur - 1]
         self.img = Image.open(imagePath)
+        
+        # resize image by rescale factor
+        self.img = self.img.resize((self.img.size[0] // self.rescaleFactor, self.img.size[1] // self.rescaleFactor))
+        
         self.tkImg = ImageTk.PhotoImage(self.img)
         self.mainPanel.config(width = max(self.tkImg.width(), 400), height = max(self.tkImg.height(), 400))
         self.mainPanel.create_image(0, 0, image = self.tkImg, anchor=NW)
@@ -164,11 +170,11 @@ class LabelTool:
                     tmp2 = [t.strip() for t in line.split()]
                     tmp = [t for t in tmp2[1:]]
                     self.bboxList.append(tuple(tmp))
-                    tmpId = self.mainPanel.create_rectangle(int(tmp[1]), int(tmp[2]), int(tmp[3]), int(tmp[4]), width = 2,
+                    tmpId = self.mainPanel.create_rectangle(int(tmp[1])//self.rescaleFactor, int(tmp[2])//self.rescaleFactor, int(tmp[3])//self.rescaleFactor, int(tmp[4])//self.rescaleFactor, width = 2,
                                                             outline = COLORS[tmp[0]])
                     self.bboxIdList.append(tmpId)
-                    self.listbox.insert(END, '%s : (%d, %d) -> (%d, %d)' %(tmp[0],int(tmp[1]), int(tmp[2]),
-                                                                           int(tmp[3]), int(tmp[4])))
+                    self.listbox.insert(END, '%s : (%d, %d) -> (%d, %d)' %(tmp[0],int(tmp[1])//self.rescaleFactor, int(tmp[2])//self.rescaleFactor,
+                                                                           int(tmp[3])//self.rescaleFactor, int(tmp[4])//self.rescaleFactor))
                     self.listbox.itemconfig(len(self.bboxIdList) - 1, fg = COLORS[tmp[0]])
 
     def saveImage(self):
@@ -185,10 +191,10 @@ class LabelTool:
         else:
             x1, x2 = min(self.STATE['x'], event.x), max(self.STATE['x'], event.x)
             y1, y2 = min(self.STATE['y'], event.y), max(self.STATE['y'], event.y)
-            self.bboxList.append((self.currentLabelClass, x1, y1, x2, y2))
+            self.bboxList.append((self.currentLabelClass, x1*self.rescaleFactor, y1*self.rescaleFactor, x2*self.rescaleFactor, y2*self.rescaleFactor))
             self.bboxIdList.append(self.bboxId)
             self.bboxId = None
-            self.listbox.insert(END, '%s : (%d, %d) -> (%d, %d)' %(self.currentLabelClass,x1, y1, x2, y2))
+            self.listbox.insert(END, '%s : (%d, %d) -> (%d, %d)' %(self.currentLabelClass,x1*self.rescaleFactor, y1*self.rescaleFactor, x2*self.rescaleFactor, y2*self.rescaleFactor))
             self.listbox.itemconfig(len(self.bboxIdList) - 1, fg = COLORS[self.currentLabelClass])
         self.STATE['click'] = 1 - self.STATE['click']
 
