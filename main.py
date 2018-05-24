@@ -4,6 +4,7 @@ import tkinter.ttk as ttk
 import os
 import glob
 import random
+import json
 
 # colors for the bounding boxes
 COLORS = {}
@@ -126,7 +127,6 @@ class LabelTool:
             s = r'D:\workspace\python\labelGUI'
 
         # get image list
-        
         self.imageDir = os.path.join(self.imageDir, '%s' %self.category)
         self.imageList = glob.glob(os.path.join(self.imageDir, '*.JPG'))
         if len(self.imageList) == 0:
@@ -137,10 +137,11 @@ class LabelTool:
         self.cur = 1
         self.total = len(self.imageList)
 
-         # set up output dir
-        self.outDir = os.path.join(self.outDir, '%s' %self.category)
-        if not os.path.exists(self.outDir):
-            os.mkdir(self.outDir)
+        # set up output dir
+        # self.outDir = os.path.join(self.outDir, '%s' %self.category)
+        # if not os.path.exists(self.outDir):
+        #     os.mkdir(self.outDir)
+        self.outDir = self.imageDir
 
         self.loadImage()
         print('%d images loaded from %s' %(self.total, s))
@@ -161,28 +162,45 @@ class LabelTool:
         # load labels
         self.clearBBox()
         self.imageName = os.path.split(imagePath)[-1].split('.')[0]
-        labelname = self.imageName + '.txt'
+        labelname = self.imageName + '.json'
         self.labelFileName = os.path.join(self.outDir, labelname)
 
         if os.path.exists(self.labelFileName):
-            with open(self.labelFileName) as f:
-                for (i, line) in enumerate(f):
-                    tmp2 = [t.strip() for t in line.split()]
-                    tmp = [t for t in tmp2[1:]]
-                    self.bboxList.append(tuple(tmp))
-                    tmpId = self.mainPanel.create_rectangle(int(tmp[1])//self.rescaleFactor, int(tmp[2])//self.rescaleFactor, int(tmp[3])//self.rescaleFactor, int(tmp[4])//self.rescaleFactor, width = 2,
-                                                            outline = COLORS[tmp[0]])
-                    self.bboxIdList.append(tmpId)
-                    self.listbox.insert(END, '%s : (%d, %d) -> (%d, %d)' %(tmp[0],int(tmp[1])//self.rescaleFactor, int(tmp[2])//self.rescaleFactor,
-                                                                           int(tmp[3])//self.rescaleFactor, int(tmp[4])//self.rescaleFactor))
-                    self.listbox.itemconfig(len(self.bboxIdList) - 1, fg = COLORS[tmp[0]])
+            with open(self.labelFileName, 'r') as json_file:
+                d = json.load(json_file)
+
+            for (i, line) in enumerate(d['box']):
+                self.bboxList.append(tuple(line))
+                tmpId = self.mainPanel.create_rectangle(int(line[1])//self.rescaleFactor, int(line[2])//self.rescaleFactor, int(line[3])//self.rescaleFactor, int(line[4])//self.rescaleFactor, width = 2,
+                                                        outline = COLORS[line[0]])
+                self.bboxIdList.append(tmpId)
+                self.listbox.insert(END, '%s : (%d, %d) -> (%d, %d)' %(line[0],int(line[1]), int(line[2]),
+                                                                        int(line[3]), int(line[4])))
+                self.listbox.itemconfig(len(self.bboxIdList) - 1, fg = COLORS[line[0]])
 
     def saveImage(self):
-        with open(self.labelFileName, 'w') as f:
+        try:
+            with open(self.labelFileName, 'r') as json_file:
+                d = json.load(json_file)
+            
+            boxes = []
             for bbox in self.bboxList:
-                f.write('%s.jpg ' % self.imageName)
-                f.write(' '.join(map(str, bbox)) + '\n')
-        print('Image No. %d saved' %self.cur)
+                boxes.append(list(bbox))
+
+            with open(self.labelFileName, 'w') as json_file:
+                if 'box' in d.keys():
+                    if len(boxes) == 0:
+                        d.pop('box', None)
+                    else:
+                        d['box'] = boxes  
+                else:
+                    d['box'] = boxes
+
+                json.dump(d, json_file, indent=4)
+            
+            print('Image No. %d saved' %self.cur)
+        except FileNotFoundError:
+            print("Make sure %s exists first. Nothing was saved." %self.labelFileName)
 
 
     def mouseClick(self, event):

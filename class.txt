@@ -1,1 +1,4 @@
 pole
+measuring_stick
+transformer
+voltage_regulator
