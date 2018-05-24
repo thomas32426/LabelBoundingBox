@@ -142,9 +142,8 @@ class LabelTool:
         # if not os.path.exists(self.outDir):
         #     os.mkdir(self.outDir)
         self.outDir = self.imageDir
-
-        self.loadImage()
         print('%d images loaded from %s' %(self.total, s))
+        self.loadImage()    
 
     def loadImage(self):
         # load image
@@ -168,15 +167,19 @@ class LabelTool:
         if os.path.exists(self.labelFileName):
             with open(self.labelFileName, 'r') as json_file:
                 d = json.load(json_file)
+                for key, val in d.items():
+                    if key != 'box':
+                        print(key, val)
 
-            for (i, line) in enumerate(d['box']):
-                self.bboxList.append(tuple(line))
-                tmpId = self.mainPanel.create_rectangle(int(line[1])//self.rescaleFactor, int(line[2])//self.rescaleFactor, int(line[3])//self.rescaleFactor, int(line[4])//self.rescaleFactor, width = 2,
-                                                        outline = COLORS[line[0]])
-                self.bboxIdList.append(tmpId)
-                self.listbox.insert(END, '%s : (%d, %d) -> (%d, %d)' %(line[0],int(line[1]), int(line[2]),
-                                                                        int(line[3]), int(line[4])))
-                self.listbox.itemconfig(len(self.bboxIdList) - 1, fg = COLORS[line[0]])
+            if 'box' in d.keys():
+                for (i, line) in enumerate(d['box']):
+                    self.bboxList.append(tuple(line))
+                    tmpId = self.mainPanel.create_rectangle(int(line[1])//self.rescaleFactor, int(line[2])//self.rescaleFactor, int(line[3])//self.rescaleFactor, int(line[4])//self.rescaleFactor, width = 2,
+                                                            outline = COLORS[line[0]])
+                    self.bboxIdList.append(tmpId)
+                    self.listbox.insert(END, '%s : (%d, %d) -> (%d, %d)' %(line[0],int(line[1]), int(line[2]),
+                                                                            int(line[3]), int(line[4])))
+                    self.listbox.itemconfig(len(self.bboxIdList) - 1, fg = COLORS[line[0]])
 
     def saveImage(self):
         try:
@@ -196,7 +199,7 @@ class LabelTool:
                 else:
                     d['box'] = boxes
 
-                json.dump(d, json_file, indent=4)
+                json.dump(d, json_file, indent=4, sort_keys=True)
             
             print('Image No. %d saved' %self.cur)
         except FileNotFoundError:
