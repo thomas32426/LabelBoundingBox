@@ -20,7 +20,7 @@ class LabelTool:
         self.frame.pack(fill=BOTH, expand=1)
         self.parent.resizable(width = FALSE, height = FALSE)
 
-        # initialize global state
+        # Initialize global state
         self.imageDir = ''
         self.imageList= []
         self.egDir = ''
@@ -38,13 +38,14 @@ class LabelTool:
         self.cla_can_temp = []
         self.classCandidateFileName = 'class.txt'
         self.rescaleFactor = 1
+        self.stickModeOn = False
 
-        # initialize mouse state
+        # Initialize mouse state
         self.STATE = dict()
         self.STATE['click'] = 0
         self.STATE['x'], self.STATE['y'] = 0, 0
 
-        # reference to bbox
+        # Reference to bbox
         self.bboxIdList = []
         self.bboxId = None
         self.bboxList = []
@@ -53,7 +54,7 @@ class LabelTool:
 
         
         # ----------------- GUI stuff ---------------------
-        # dir entry & load
+        # Directory entry and loading
         self.label = Label(self.frame, text = "Image Dir:")
         self.label.grid(row = 0, column = 0, sticky = E)
         self.entry = Entry(self.frame)
@@ -61,18 +62,19 @@ class LabelTool:
         self.ldBtn = Button(self.frame, text = "Load", command = self.loadDir)
         self.ldBtn.grid(row = 0, column = 2,sticky = W+E)
 
-        # main panel for labeling
+        # Main panel for labeling
         self.mainPanel = Canvas(self.frame, cursor ='tcross')
         self.mainPanel.bind("<Button-1>", self.mouseClick)
         self.mainPanel.bind("<Motion>", self.mouseMove)
-        self.parent.bind("<Escape>", self.cancelBBox)  # press <Espace> to cancel current bbox
-        self.parent.bind("<Left>", self.prevImage) # press 'a' to go backforward
-        self.parent.bind("<Right>", self.nextImage) # press 'd' to go forward
+        self.parent.bind("<Escape>", self.cancelBBox)  # Press escape key to cancel current bbox
+        self.parent.bind("<Left>", self.prevImage) # Press left arrow to go backforward
+        self.parent.bind("<Right>", self.nextImage) # Press right arrow to go forward
+
         self.mainPanel.grid(row = 1, column = 1, rowspan = 4, sticky = W+N)
 
-        # choose class
+        # Choose class
         self.className = StringVar()
-        self.classCandidate = ttk.Combobox(self.frame,state='readonly',textvariable=self.className)
+        self.classCandidate = ttk.Combobox(self.frame, state='readonly', textvariable=self.className)
         self.classCandidate.grid(row=1,column=2)
         self.classCandidate.bind("<<ComboboxSelected>>", self.setClass)
         if os.path.exists(self.classCandidateFileName):
@@ -85,8 +87,18 @@ class LabelTool:
         self.classCandidate['values'] = self.cla_can_temp
         self.classCandidate.current(0)
         self.currentLabelClass = self.classCandidate.get() #init
-        #self.btnClass = Button(self.frame, text = 'ComfirmClass', command = self.setClass)
-        #self.btnClass.grid(row=2,column=2,sticky = W + E)
+        self.btnClass = Button(self.frame, text = 'Stick Mode', command = self.stickMode)
+        self.btnClass.grid(row=2,column=2,sticky = W + E)
+
+        # Bind keyboard keys to classes
+        self.parent.bind("0", self.keyboardSetClass)
+        self.parent.bind("1", self.keyboardSetClass)
+        self.parent.bind("2", self.keyboardSetClass)
+        self.parent.bind("3", self.keyboardSetClass)
+        self.parent.bind("4", self.keyboardSetClass)
+        self.parent.bind("5", self.keyboardSetClass)
+        self.parent.bind("6", self.keyboardSetClass)
+        self.parent.bind("7", self.keyboardSetClass)
 
         # showing bbox info & delete bbox
         self.lb1 = Label(self.frame, text = 'Bounding boxes:')
@@ -127,7 +139,7 @@ class LabelTool:
             self.parent.focus()
             self.category = str(s)
         else:
-            s = r'D:\workspace\python\labelGUI'
+            s = r'./data/trainingSetA'
 
         # get image list
         self.imageDir = os.path.join(self.imageDir, '%s' %self.category)
@@ -246,7 +258,7 @@ class LabelTool:
 
     def delBBox(self):
         sel = self.listbox.curselection()
-        if len(sel) != 1 :
+        if len(sel) != 1:
             return
         idx = int(sel[0])
         self.mainPanel.delete(self.bboxIdList[idx])
@@ -282,10 +294,36 @@ class LabelTool:
 
     def setClass(self, *args):
         self.currentLabelClass = self.classCandidate.get()
-        print('set label class to:',self.currentLabelClass)
+    
+    def keyboardSetClass(self, event):
+        if event.char == '0':
+            self.classCandidate.current(0)
+        elif event.char == '1':
+            self.classCandidate.current(1)
+        elif event.char == '2':
+            self.classCandidate.current(2)
+        elif event.char == '3':
+            self.classCandidate.current(3)   
+        elif event.char == '4':
+            self.classCandidate.current(4)
+        elif event.char == '5':
+            self.classCandidate.current(5)
+        elif event.char == '6':
+            self.classCandidate.current(6)
+        elif event.char == '7':
+            self.classCandidate.current(7)
+        
+        self.currentLabelClass = self.classCandidate.get()
+
+    def stickMode(self):
+        self.stickModeOn = not self.stickModeOn
+        if self.stickModeOn == True:
+            print("Stick mode activated!")
+        else:
+            print("Stick mode deactivated!")
 
 if __name__ == '__main__':
     root = Tk()
     tool = LabelTool(root)
-    root.resizable(width =  True, height = True)
+    root.resizable(width=True, height=True)
     root.mainloop()
