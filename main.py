@@ -8,6 +8,7 @@ import json
 
 # colors for the bounding boxes
 COLORS = {}
+colorList = ['#000000', '#cc0000', '#0000ff', '#6600cc', '#33cc33', '#ff6600', '#ff00ff', '#00ffff']
 
 # noinspection PyUnusedLocal
 class LabelTool:
@@ -50,6 +51,7 @@ class LabelTool:
         self.hl = None
         self.vl = None
 
+        
         # ----------------- GUI stuff ---------------------
         # dir entry & load
         self.label = Label(self.frame, text = "Image Dir:")
@@ -72,18 +74,19 @@ class LabelTool:
         self.className = StringVar()
         self.classCandidate = ttk.Combobox(self.frame,state='readonly',textvariable=self.className)
         self.classCandidate.grid(row=1,column=2)
+        self.classCandidate.bind("<<ComboboxSelected>>", self.setClass)
         if os.path.exists(self.classCandidateFileName):
             with open(self.classCandidateFileName) as cf:
-                for line in cf.readlines():
+                for idx, line in enumerate(cf.readlines()):
                     tmp = line.strip('\n')
                     self.cla_can_temp.append(tmp)
-                    COLORS[tmp] = '#%02x%02x%02x' % (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-
+                    COLORS[tmp] = colorList[idx]
+                    
         self.classCandidate['values'] = self.cla_can_temp
         self.classCandidate.current(0)
         self.currentLabelClass = self.classCandidate.get() #init
-        self.btnClass = Button(self.frame, text = 'ComfirmClass', command = self.setClass)
-        self.btnClass.grid(row=2,column=2,sticky = W + E)
+        #self.btnClass = Button(self.frame, text = 'ComfirmClass', command = self.setClass)
+        #self.btnClass.grid(row=2,column=2,sticky = W + E)
 
         # showing bbox info & delete bbox
         self.lb1 = Label(self.frame, text = 'Bounding boxes:')
@@ -277,9 +280,9 @@ class LabelTool:
             self.cur = idx
             self.loadImage()
 
-    def setClass(self):
+    def setClass(self, *args):
         self.currentLabelClass = self.classCandidate.get()
-        print('set label class to :',self.currentLabelClass)
+        print('set label class to:',self.currentLabelClass)
 
 if __name__ == '__main__':
     root = Tk()

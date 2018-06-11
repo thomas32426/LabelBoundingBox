@@ -2,3 +2,7 @@ pole
 measuring_stick
 transformer
 voltage_regulator
+primary
+secondary
+comms
+stick_marker
