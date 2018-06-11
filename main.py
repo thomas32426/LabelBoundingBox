@@ -6,19 +6,21 @@ import glob
 import random
 import json
 
-# colors for the bounding boxes
+# Colors for the bounding boxes
 COLORS = {}
 colorList = ['#000000', '#cc0000', '#0000ff', '#6600cc', '#33cc33', '#ff6600', '#ff00ff', '#00ffff']
 
-# noinspection PyUnusedLocal
 class LabelTool:
     def __init__(self, master):
-        # set up the main frame
+        # Set up the main frame
         self.parent = master
         self.parent.title("LabelTool")
         self.frame = Frame(self.parent)
         self.frame.pack(fill=BOTH, expand=1)
-        self.parent.resizable(width = FALSE, height = FALSE)
+        self.parent.resizable(width=True, height=True)
+
+        # Calculate window height
+        self.screenHeight = self.parent.winfo_screenheight()
 
         # Initialize global state
         self.imageDir = ''
@@ -52,7 +54,6 @@ class LabelTool:
         self.hl = None
         self.vl = None
 
-        
         # ----------------- GUI stuff ---------------------
         # Directory entry and loading
         self.label = Label(self.frame, text = "Image Dir:")
@@ -100,7 +101,7 @@ class LabelTool:
         self.parent.bind("6", self.keyboardSetClass)
         self.parent.bind("7", self.keyboardSetClass)
 
-        # showing bbox info & delete bbox
+        # Showing bbox info and delete bbox
         self.lb1 = Label(self.frame, text = 'Bounding boxes:')
         self.lb1.grid(row = 3, column = 2,  sticky = W + N)
         self.listbox = Listbox(self.frame, width = 22, height = 12)
@@ -110,7 +111,7 @@ class LabelTool:
         self.btnClear = Button(self.frame, text = 'ClearAll', command = self.clearBBox)
         self.btnClear.grid(row = 6, column = 2, sticky = W + E + N)
 
-        # control panel for image navigation
+        # Control panel for image navigation
         self.ctrPanel = Frame(self.frame)
         self.ctrPanel.grid(row = 7, column = 1, columnspan = 2, sticky = W + E)
         self.prevBtn = Button(self.ctrPanel, text='<< Prev', width = 10, command = self.prevImage)
@@ -126,7 +127,7 @@ class LabelTool:
         self.goBtn = Button(self.ctrPanel, text = 'Go', command = self.gotoImage)
         self.goBtn.pack(side = LEFT)
 
-        # display mouse position
+        # Display mouse position
         self.disp = Label(self.ctrPanel, text='')
         self.disp.pack(side = RIGHT)
 
@@ -141,31 +142,36 @@ class LabelTool:
         else:
             s = r'./data/trainingSetA'
 
-        # get image list
+        # Get image list
         self.imageDir = os.path.join(self.imageDir, '%s' %self.category)
         self.imageList = glob.glob(os.path.join(self.imageDir, '*.JPG'))
         if len(self.imageList) == 0:
             print('No .JPG images found in the specified dir!')
             return
 
-        # default to the 1st image in the collection
+        # Default to the first image in the collection
         self.cur = 1
         self.total = len(self.imageList)
 
-        # set up output dir
-        # self.outDir = os.path.join(self.outDir, '%s' %self.category)
-        # if not os.path.exists(self.outDir):
-        #     os.mkdir(self.outDir)
+        # Set up output dir
         self.outDir = self.imageDir
         print('%d images loaded from %s' %(self.total, s))
         self.loadImage()    
 
     def loadImage(self):
-        # load image
+        # Load image
         imagePath = self.imageList[self.cur - 1]
         self.img = Image.open(imagePath)
         
-        # resize image by rescale factor
+        # Calculate rescale factor
+        imageHeight = self.img.size[1]
+        offsets = 25 + 25 + 30 # Top + Img Dir + Bottom
+        for factor in range(32):
+            if (imageHeight / (factor + 1)) < (self.screenHeight - offsets):
+                self.rescaleFactor = factor + 1
+                break
+        
+        # Resize image by rescale factor
         self.img = self.img.resize((self.img.size[0] // self.rescaleFactor, self.img.size[1] // self.rescaleFactor))
         
         self.tkImg = ImageTk.PhotoImage(self.img)
@@ -173,7 +179,7 @@ class LabelTool:
         self.mainPanel.create_image(0, 0, image = self.tkImg, anchor=NW)
         self.progLabel.config(text = "%04d/%04d" %(self.cur, self.total))
 
-        # load labels
+        # Load labels
         self.clearBBox()
         self.imageName = os.path.split(imagePath)[-1].split('.')[0]
         labelname = self.imageName + '.json'
