@@ -10,7 +10,7 @@ import numpy as np
 
 # Colors for the bounding boxes
 COLORS = {}
-colorList = ['#000000', '#cc0000', '#0000ff', '#6600cc', '#33cc33', '#ff6600', '#ff00ff', '#00ffff']
+colorList = ['#000000', '#cc0000', '#0000ff', '#6600cc', '#33cc33', '#ff6600', '#ff00ff', '#00ffff', '#663300', '#009999']
 
 # Conversions
 def Pil2Np(img):
@@ -116,6 +116,8 @@ class LabelTool:
         self.parent.bind("5", self.keyboardSetClass)
         self.parent.bind("6", self.keyboardSetClass)
         self.parent.bind("7", self.keyboardSetClass)
+        self.parent.bind("8", self.keyboardSetClass)
+        self.parent.bind("9", self.keyboardSetClass)
 
         # Showing bbox info and delete bbox
         self.lb1 = Label(self.frame, text = 'Bounding boxes:')
@@ -428,6 +430,10 @@ class LabelTool:
             self.classCandidate.current(6)
         elif event.char == '7':
             self.classCandidate.current(7)
+        elif event.char == '8':
+            self.classCandidate.current(8)
+        elif event.char == '9':
+            self.classCandidate.current(9)
         
         self.currentLabelClass = self.classCandidate.get()
 
