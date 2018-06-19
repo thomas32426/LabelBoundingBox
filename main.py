@@ -340,14 +340,15 @@ class LabelTool:
 
     def mouseClick(self, event):
         if self.STATE['click'] == 0:
-            self.STATE['x'], self.STATE['y'] = event.x, event.y
+            self.STATE['x'], self.STATE['y'] = self.localPoint2Global((event.x, event.y))
         else:
-            x1, x2 = min(self.STATE['x'], event.x), max(self.STATE['x'], event.x)
-            y1, y2 = min(self.STATE['y'], event.y), max(self.STATE['y'], event.y)
-            self.bboxList.append((self.currentLabelClass, x1*self.rescaleFactor, y1*self.rescaleFactor, x2*self.rescaleFactor, y2*self.rescaleFactor))
+            globalMouse = self.localPoint2Global((event.x, event.y))
+            x1, x2 = min(self.STATE['x'], globalMouse[0]), max(self.STATE['x'], globalMouse[0])
+            y1, y2 = min(self.STATE['y'], globalMouse[1]), max(self.STATE['y'], globalMouse[1])
+            self.bboxList.append((self.currentLabelClass, x1, y1, x2, y2))
             self.bboxIdList.append(self.bboxId)
             self.bboxId = None
-            self.listbox.insert(END, '%s : (%d, %d) -> (%d, %d)' %(self.currentLabelClass, x1*self.rescaleFactor, y1*self.rescaleFactor, x2*self.rescaleFactor, y2*self.rescaleFactor))
+            self.listbox.insert(END, '%s : (%d, %d) -> (%d, %d)' %(self.currentLabelClass, x1, y1, x2, y2))
             self.listbox.itemconfig(len(self.bboxIdList) - 1, fg = COLORS[self.currentLabelClass])
         self.STATE['click'] = 1 - self.STATE['click']
 
@@ -360,7 +361,8 @@ class LabelTool:
         if 1 == self.STATE['click']:
             if self.bboxId:
                 self.mainPanel.delete(self.bboxId)
-            self.bboxId = self.mainPanel.create_rectangle(self.STATE['x'], self.STATE['y'], event.x, event.y,
+            localSTATE = self.globalPoint2Local((self.STATE['x'], self.STATE['y']))
+            self.bboxId = self.mainPanel.create_rectangle(localSTATE[0], localSTATE[1], event.x, event.y,
                                                           width=self.boundingBoxWidth, outline = COLORS[self.currentLabelClass])
 
     def cancelBBox(self, event):
