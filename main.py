@@ -5,10 +5,19 @@ import os
 import glob
 import random
 import json
+import numpy as np
+from matplotlib import pyplot
 
 # Colors for the bounding boxes
 COLORS = {}
 colorList = ['#000000', '#cc0000', '#0000ff', '#6600cc', '#33cc33', '#ff6600', '#ff00ff', '#00ffff']
+def Pil2Np(img):
+    npArray = np.array(img)
+    return npArray
+
+def Np2Pil(img):
+    pilImg = Image.fromarray(img.astype("uint8"), "RGB")
+    return pilImg
 
 class LabelTool:
     def __init__(self, master):
@@ -41,6 +50,9 @@ class LabelTool:
         self.classCandidateFileName = 'class.txt'
         self.rescaleFactor = 1
         self.stickModeOn = False
+        self.newRescaleFactor = 1
+        self.originalBox = [0,0,400,400]
+        self.sliceBox = [0,0,400,400]
 
         # Initialize mouse state
         self.STATE = dict()
@@ -134,6 +146,26 @@ class LabelTool:
         self.frame.columnconfigure(1, weight = 1)
         self.frame.rowconfigure(4, weight = 1)
 
+        # Bind mouse wheel
+        self.parent.bind("<MouseWheel>", self.mouseWheel) # Windows
+        self.parent.bind("<Button-4>", self.mouseWheel)
+        self.parent.bind("<Button-5>", self.mouseWheel)
+
+    def mouseWheel(self, event):
+        if event.num == 5 or event.delta == -120:
+            self.newRescaleFactor /= 1.2
+            if self.newRescaleFactor < 1:
+                self.newRescaleFactor = 1
+            
+        if event.num == 4 or event.delta == 120:
+            self.newRescaleFactor *= 1.2
+            if self.newRescaleFactor > 16:
+                self.newRescaleFactor = 16
+        
+        self.sliceImage()
+        self.drawImage()
+        self.renderMouseLines()
+
     def loadDir(self, dbg = False):
         if not dbg:
             s = self.entry.get()
@@ -158,6 +190,51 @@ class LabelTool:
         print('%d images loaded from %s' %(self.total, s))
         self.loadImage()    
 
+    def renderMouseLines(self):
+        if self.hl:
+            self.mainPanel.delete(self.hl)
+        self.hl = self.mainPanel.create_line(0, self.mouseY, self.tkImg.width(), self.mouseY, width = 1)
+        if self.vl:
+            self.mainPanel.delete(self.vl)
+        self.vl = self.mainPanel.create_line(self.mouseX, 0, self.mouseX, self.tkImg.height(), width = 1)
+
+    def drawImage(self):
+        self.tkImg = ImageTk.PhotoImage(self.renderImg)
+        self.mainPanel.config(width = self.windowWidth, height = self.windowHeight)
+        self.mainPanel.create_image(0, 0, image = self.tkImg, anchor=NW)
+        self.progLabel.config(text = "%04d/%04d" %(self.cur, self.total))
+
+    def sliceImage(self):
+        # calculate the slice box
+        scaledWidth = self.originalBox[2] / self.newRescaleFactor
+        scaleHeight = self.originalBox[3] / self.newRescaleFactor
+        zoomBox = [int(self.mouseX*self.sliceBox[2]/self.windowWidth + self.sliceBox[0] - scaledWidth//2.0), int(self.mouseY*self.sliceBox[3]/self.windowHeight + self.sliceBox[1] - scaleHeight//2.0), int(scaledWidth), int(scaleHeight)]
+
+        if zoomBox[0] < 0:
+            zoomBox[0] = 0
+        if zoomBox[1] < 0:
+            zoomBox[1] = 0
+        if zoomBox[0] + zoomBox[2] > self.originalBox[2]:
+            zoomBox[0] = self.originalBox[2] - zoomBox[2]
+        if zoomBox[1] + zoomBox[3] > self.originalBox[3]:
+            zoomBox[1]  = self.originalBox[3] - zoomBox[3]
+        
+        self.sliceBox = zoomBox
+        # print("self.newRescaleFactor", self.newRescaleFactor)
+        # print("self.sliceBox", self.sliceBox)
+        npImg = Pil2Np(self.img)
+
+        # print("before shape", npImg.shape)
+        newNpImg = npImg[self.sliceBox[1]:self.sliceBox[1]+self.sliceBox[3], self.sliceBox[0]:self.sliceBox[0]+self.sliceBox[2]]
+        # print("after shape", newNpImg.shape)
+
+        # pyplot.imshow(newNpImg)
+        # pyplot.show()
+
+        self.renderImg = Np2Pil(newNpImg)
+        self.renderImg = self.renderImg.resize((self.windowWidth, self.windowHeight))
+
+
     def loadImage(self):
         # Load image
         imagePath = self.imageList[self.cur - 1]
@@ -172,12 +249,16 @@ class LabelTool:
                 break
         
         # Resize image by rescale factor
-        self.img = self.img.resize((self.img.size[0] // self.rescaleFactor, self.img.size[1] // self.rescaleFactor))
+        self.renderImg = self.img.resize((self.img.size[0] // self.rescaleFactor, self.img.size[1] // self.rescaleFactor))
         
-        self.tkImg = ImageTk.PhotoImage(self.img)
-        self.mainPanel.config(width = max(self.tkImg.width(), 400), height = max(self.tkImg.height(), 400))
-        self.mainPanel.create_image(0, 0, image = self.tkImg, anchor=NW)
-        self.progLabel.config(text = "%04d/%04d" %(self.cur, self.total))
+        
+        self.windowWidth = max(self.renderImg.size[0], 400)
+        self.windowHeight = max(self.renderImg.size[1], 400)
+        self.originalBox[2] = self.img.size[0]
+        self.originalBox[3] = self.img.size[1]
+        self.sliceBox = self.originalBox
+
+        self.drawImage()
 
         # Load labels
         self.clearBBox()
@@ -236,19 +317,16 @@ class LabelTool:
             self.bboxList.append((self.currentLabelClass, x1*self.rescaleFactor, y1*self.rescaleFactor, x2*self.rescaleFactor, y2*self.rescaleFactor))
             self.bboxIdList.append(self.bboxId)
             self.bboxId = None
-            self.listbox.insert(END, '%s : (%d, %d) -> (%d, %d)' %(self.currentLabelClass,x1*self.rescaleFactor, y1*self.rescaleFactor, x2*self.rescaleFactor, y2*self.rescaleFactor))
+            self.listbox.insert(END, '%s : (%d, %d) -> (%d, %d)' %(self.currentLabelClass, x1*self.rescaleFactor, y1*self.rescaleFactor, x2*self.rescaleFactor, y2*self.rescaleFactor))
             self.listbox.itemconfig(len(self.bboxIdList) - 1, fg = COLORS[self.currentLabelClass])
         self.STATE['click'] = 1 - self.STATE['click']
 
     def mouseMove(self, event):
         self.disp.config(text = 'x: %d, y: %d' %(event.x, event.y))
+        self.mouseX = event.x
+        self.mouseY = event.y
         if self.tkImg:
-            if self.hl:
-                self.mainPanel.delete(self.hl)
-            self.hl = self.mainPanel.create_line(0, event.y, self.tkImg.width(), event.y, width = 2)
-            if self.vl:
-                self.mainPanel.delete(self.vl)
-            self.vl = self.mainPanel.create_line(event.x, 0, event.x, self.tkImg.height(), width = 2)
+            self.renderMouseLines()
         if 1 == self.STATE['click']:
             if self.bboxId:
                 self.mainPanel.delete(self.bboxId)
