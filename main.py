@@ -6,11 +6,13 @@ import glob
 import random
 import json
 import numpy as np
-from matplotlib import pyplot
+# from matplotlib import pyplot
 
 # Colors for the bounding boxes
 COLORS = {}
 colorList = ['#000000', '#cc0000', '#0000ff', '#6600cc', '#33cc33', '#ff6600', '#ff00ff', '#00ffff']
+
+# Conversions
 def Pil2Np(img):
     npArray = np.array(img)
     return npArray
@@ -32,6 +34,8 @@ class LabelTool:
         self.screenHeight = self.parent.winfo_screenheight()
 
         # Initialize global state
+        self.cursorCrossWidth = 1
+        self.boundingBoxWidth = 2
         self.imageDir = ''
         self.imageList= []
         self.egDir = ''
@@ -193,22 +197,48 @@ class LabelTool:
     def renderMouseLines(self):
         if self.hl:
             self.mainPanel.delete(self.hl)
-        self.hl = self.mainPanel.create_line(0, self.mouseY, self.tkImg.width(), self.mouseY, width = 1)
+        self.hl = self.mainPanel.create_line(0, self.mouseY, self.tkImg.width(), self.mouseY, width=self.cursorCrossWidth)
         if self.vl:
             self.mainPanel.delete(self.vl)
-        self.vl = self.mainPanel.create_line(self.mouseX, 0, self.mouseX, self.tkImg.height(), width = 1)
+        self.vl = self.mainPanel.create_line(self.mouseX, 0, self.mouseX, self.tkImg.height(), width=self.cursorCrossWidth)
 
     def drawImage(self):
         self.tkImg = ImageTk.PhotoImage(self.renderImg)
         self.mainPanel.config(width = self.windowWidth, height = self.windowHeight)
         self.mainPanel.create_image(0, 0, image = self.tkImg, anchor=NW)
         self.progLabel.config(text = "%04d/%04d" %(self.cur, self.total))
+        self.drawBBoxes()
+
+    def globalPoint2Local(self, point):
+        """ Converts an (x, y) point tuple from global space to local coords
+        """
+        x = int((point[0] - self.sliceBox[0]) * (self.windowWidth / self.sliceBox[2]))
+        y = int((point[1] - self.sliceBox[1]) * (self.windowHeight / self.sliceBox[3]))
+        return (x, y)
+
+    def localPoint2Global(self, point):
+        """ Converts an (x, y) point tuple from local space to global coords
+        """
+        x = int(point[0] * self.sliceBox[2] / self.windowWidth + self.sliceBox[0])
+        y = int(point[1] * self.sliceBox[3] / self.windowHeight + self.sliceBox[1])
+        return (x, y)
+
+    def drawBBoxes(self):
+        for i, bbox in enumerate(self.bboxList):
+            topLeft = self.globalPoint2Local((bbox[1], bbox[2]))
+            bottomRight = self.globalPoint2Local((bbox[3], bbox[4]))
+            tempID = self.mainPanel.create_rectangle(topLeft[0], topLeft[1], bottomRight[0], bottomRight[1], width=self.boundingBoxWidth, outline=COLORS[bbox[0]])
+            self.bboxIdList[i] = tempID
 
     def sliceImage(self):
         # calculate the slice box
         scaledWidth = self.originalBox[2] / self.newRescaleFactor
         scaleHeight = self.originalBox[3] / self.newRescaleFactor
-        zoomBox = [int(self.mouseX*self.sliceBox[2]/self.windowWidth + self.sliceBox[0] - scaledWidth//2.0), int(self.mouseY*self.sliceBox[3]/self.windowHeight + self.sliceBox[1] - scaleHeight//2.0), int(scaledWidth), int(scaleHeight)]
+        globalMousePos = self.localPoint2Global((self.mouseX, self.mouseY))
+        zoomBox = [int(globalMousePos[0] - scaledWidth//2.0), 
+                   int(globalMousePos[1] - scaleHeight//2.0), 
+                   int(scaledWidth), 
+                   int(scaleHeight)]
 
         if zoomBox[0] < 0:
             zoomBox[0] = 0
@@ -276,14 +306,14 @@ class LabelTool:
             if 'box' in d.keys():
                 for (i, line) in enumerate(d['box']):
                     self.bboxList.append(tuple(line))
-                    tmpId = self.mainPanel.create_rectangle(int(line[1])//self.rescaleFactor, int(line[2])//self.rescaleFactor, int(line[3])//self.rescaleFactor, int(line[4])//self.rescaleFactor, width = 2,
-                                                            outline = COLORS[line[0]])
+                    tmpId = self.mainPanel.create_rectangle(int(line[1])//self.rescaleFactor, int(line[2])//self.rescaleFactor, int(line[3])//self.rescaleFactor, int(line[4])//self.rescaleFactor, width=self.boundingBoxWidth,
+                                                            outline=COLORS[line[0]])
                     self.bboxIdList.append(tmpId)
                     self.listbox.insert(END, '%s : (%d, %d) -> (%d, %d)' %(line[0],int(line[1]), int(line[2]),
                                                                             int(line[3]), int(line[4])))
                     self.listbox.itemconfig(len(self.bboxIdList) - 1, fg = COLORS[line[0]])
 
-    def saveImage(self):
+    def saveImage(self, event=None):
         try:
             with open(self.labelFileName, 'r') as json_file:
                 d = json.load(json_file)
@@ -331,7 +361,7 @@ class LabelTool:
             if self.bboxId:
                 self.mainPanel.delete(self.bboxId)
             self.bboxId = self.mainPanel.create_rectangle(self.STATE['x'], self.STATE['y'], event.x, event.y,
-                                                          width = 2, outline = COLORS[self.currentLabelClass])
+                                                          width=self.boundingBoxWidth, outline = COLORS[self.currentLabelClass])
 
     def cancelBBox(self, event):
         if 1 == self.STATE['click']:
