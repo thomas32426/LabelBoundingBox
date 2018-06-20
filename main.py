@@ -7,12 +7,11 @@ import glob
 import random
 import json
 import numpy as np
-# from matplotlib import pyplot
 
 # Colors for the bounding boxes
 COLORS = {}
-colorList = ['#000000', '#cc0000', '#0000ff', '#6600cc', '#33cc33', '#ff6600', '#ff00ff',
-             '#00ffff', '#663300', '#009999']
+colorList = ['#000000', '#cc0000', '#0000ff', '#663300', '#33cc33', '#00ffff', '#ff6600', 
+             '#ff00ff', '#99cc00', '#6600cc', '#009999']
 
 # Conversions
 def Pil2Np(img):

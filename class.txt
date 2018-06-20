@@ -3,8 +3,9 @@ measuring_stick
 transformer
 voltage_regulator
 primary
-primary_intersection
 secondary
 riser
 comms
 stick_marker
+pole_top
+pole_bottom
